@@ -26,10 +26,11 @@ function ChatArea(props){
   const ChatAreaRef                   = useRef();
 
   //--------------------------------------- -------------------
-  function renderItem({item}){        
+  function renderItem({item}){   
+
     return (
       <Box>
-        {item.content}
+        {item.content["content"]}
       </Box>      
     ) 
   };
@@ -91,7 +92,8 @@ export default function App() {
 
   const [chatData,    setChatData]                  = useState([]);
 
-  var ws = new WebSocket('ws://10.0.0.6:8080'); 
+  // var ws = new WebSocket('ws://10.0.0.6:8080');  
+  var ws = new WebSocket('ws://192.168.20.48:8080'); 
   ws.onopen = () => {
 
     //Log in
@@ -106,9 +108,14 @@ export default function App() {
   }
 
   ws.onmessage = (e) => {
-    // a message was received
-    console.log(e.data);
-    add_chat_item("generic_message", e.data)
+    // a message was received  
+    let msg = JSON.parse(e.data);
+    if (msg["type"]==="Chat"){
+      add_chat_item("generic_message", msg["content"]);
+    } else {
+      //TODO: handle status messages
+    }  
+    
   };
 
   ws.onerror = (e) => {
@@ -136,7 +143,7 @@ export default function App() {
   }
 
   function generate_generic_message_chat_item_content(data){
-    console.log(data);
+    
     return (
       <Box 
         style=                  {styles.chat_box_system} 
@@ -152,14 +159,15 @@ export default function App() {
 
   function add_chat_item(template, data){
     //get data and converts it to a chat item format.
-    
+    console.log(data);
+
     let content;
     if (template===null){
       return;     
     }  else if (template==="user_text"){
       content = generate_user_text_chat_item_content(data);      
     } else if (template==="generic_message"){      
-      content = generate_generic_message_chat_item_content(data)
+      content = generate_generic_message_chat_item_content(data["text"])
     }
 
     let new_chat_item = {
