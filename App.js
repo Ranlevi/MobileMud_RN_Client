@@ -156,7 +156,7 @@ export default function App() {
         borderColor=            "primary.600"
         borderWidth=            "3px"
       >
-        <Markdown>{data}</Markdown>
+        <Markdown onLinkPress={link_handler}>{data}</Markdown>
       </Box>
     )
   }
@@ -182,7 +182,43 @@ export default function App() {
     setChatData((chatData => [...chatData, new_chat_item]));
   }
 
-  function link_handler(type, options){}
+  function link_handler(data){
+    
+    //Click on NPC name.
+    //commands should be: look 5, kill 5, copy ID.
+    //assume data string format is "NPC_ID"
+    let data_arr = data.split('_');
+    let type = data_arr[0];
+    let id= data_arr[1];
+    let content = [];
+    let cmd_arr = [];
+
+    switch(type){
+      case('NPC'):
+        cmd_arr = ["Look", "Kill"];
+        break;
+
+      default:
+        console.error(`link_handler: unknown type - ${type}.`);
+    }
+
+    for (const cmd of cmd_arr){
+      let text = `${cmd} ${id}`;
+      content.push(
+        <Actionsheet.Item 
+          key={get_new_id()}
+          onPress={()=>{
+            setOpenCmdActnSht(false); //maybe here the bug??
+            process_user_input(text);
+          }}
+        >
+          {text}
+        </Actionsheet.Item>
+      );      
+    }
+    setCmdActnSht_Content(content);
+    setOpenCmdActnSht(true);    
+  }
 
   function process_user_input(text){
     add_chat_item('user_text', {content: text});
