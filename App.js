@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { StyleSheet} from 'react-native';
 import {Box, NativeBaseProvider, Input, FlatList }  from 'native-base';
 import { Actionsheet, Text }                 from 'native-base';
+import Markdown from 'react-native-markdown-display';
 
 
 
@@ -27,11 +28,9 @@ function ChatArea(props){
 
   //--------------------------------------- -------------------
   function renderItem({item}){   
-
+    
     return (
-      <Box>
-        {item.content}
-      </Box>      
+      <Box>{item.content}</Box>      
     ) 
   };
 
@@ -148,7 +147,7 @@ export default function App() {
   }
 
   function generate_generic_message_chat_item_content(data){
-    
+    //https://www.npmjs.com/package/react-native-markdown-display handle links
     return (
       <Box 
         style=                  {styles.chat_box_system} 
@@ -157,7 +156,7 @@ export default function App() {
         borderColor=            "primary.600"
         borderWidth=            "3px"
       >
-        <Text>{data}</Text>
+        <Markdown>{data}</Markdown>
       </Box>
     )
   }
