@@ -30,7 +30,7 @@ function ChatArea(props){
 
     return (
       <Box>
-        {item.content["content"]}
+        {item.content}
       </Box>      
     ) 
   };
@@ -52,7 +52,7 @@ function ChatArea(props){
 function InfoBar(props){
   return(
     <Box backgroundColor="white">
-      <Text fontSize="lg" >{props.text}</Text>
+      <Text fontSize="lg" >Health: {props.text}</Text>
     </Box>
   )
 }
@@ -110,11 +110,16 @@ export default function App() {
   ws.onmessage = (e) => {
     // a message was received  
     let msg = JSON.parse(e.data);
-    if (msg["type"]==="Chat"){
-      add_chat_item("generic_message", msg["content"]);
-    } else {
-      //TODO: handle status messages
-    }  
+
+    switch(msg["type"]){
+      case ("Chat"):
+        add_chat_item("generic_message", msg["content"]);
+        break;
+
+      case ("Status"):
+        setInfobarText(msg["content"]["health"]);
+        break;
+    }      
     
   };
 
@@ -159,14 +164,14 @@ export default function App() {
 
   function add_chat_item(template, data){
     //get data and converts it to a chat item format.
-    console.log(data);
-
     let content;
     if (template===null){
       return;     
     }  else if (template==="user_text"){
+      
       content = generate_user_text_chat_item_content(data);      
     } else if (template==="generic_message"){      
+      
       content = generate_generic_message_chat_item_content(data["text"])
     }
 
@@ -182,7 +187,11 @@ export default function App() {
 
   function process_user_input(text){
     add_chat_item('user_text', {content: text});
-    ws.send(text);
+    let msg = {
+      type: 'User Input',
+      content: text
+    }
+    ws.send(JSON.stringify(msg));
   }  
 
   return (
