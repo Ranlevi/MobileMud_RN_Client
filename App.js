@@ -183,13 +183,12 @@ export default function App() {
   }
 
   function link_handler(data){
-    
-    //Click on NPC name.
-    //commands should be: look 5, kill 5, copy ID.
+        
     //assume data string format is "NPC_ID"
     let data_arr = data.split('_');
     let type = data_arr[0];
     let id= data_arr[1];
+
     let content = [];
     let cmd_arr = [];
 
@@ -197,19 +196,58 @@ export default function App() {
       case('NPC'):
         cmd_arr = ["Look", "Kill"];
         break;
+      
+      case('ROOM'):
+        cmd_arr = ["Look"];
+        break;
+      
+      case('north'):
+        cmd_arr = ["North"];
+        break;
 
+      case('south'):
+        cmd_arr = ["South"];
+        break;
+
+      case('east'):
+        cmd_arr = ["East"];
+        break;
+
+      case('west'):
+        cmd_arr = ["West"];
+        break;
+
+      case('up'):
+        cmd_arr = ["Up"];
+        break;
+
+      case('down'):
+        cmd_arr = ["Down"];
+        break;
+
+      case('User'):
+        cmd_arr = ["Look"];
+        break;
+
+      
       default:
         console.error(`link_handler: unknown type - ${type}.`);
     }
 
     for (const cmd of cmd_arr){
-      let text = `${cmd} ${id}`;
+      let text;
+      if (id===undefined){
+        text = `${cmd}`;
+      } else {
+        text = `${cmd} ${id}`;
+      }
+      
       content.push(
         <Actionsheet.Item 
           key={get_new_id()}
           onPress={()=>{
-            setOpenCmdActnSht(false); //maybe here the bug??
             process_user_input(text);
+            setOpenCmdActnSht(false);            
           }}
         >
           {text}
