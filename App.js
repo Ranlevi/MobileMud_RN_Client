@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
-import { StyleSheet} from 'react-native';
+import React, { useState, useRef }                  from 'react';
+import { StyleSheet}                                from 'react-native';
 import {Box, NativeBaseProvider, Input, FlatList }  from 'native-base';
-import { Actionsheet, Text }                 from 'native-base';
-import Markdown from 'react-native-markdown-display';
+import { Actionsheet, Text }                        from 'native-base';
 
-
+//https://www.npmjs.com/package/react-native-markdown-display
+import Markdown                                     from 'react-native-markdown-display';
 
 //////////////////////////////////
 function get_new_id(length=12) {
+  //Generate a random 12 char id (String)
   var result           = '';
   var characters       = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   var charactersLength = characters.length;
@@ -19,16 +20,14 @@ function get_new_id(length=12) {
 }
 
 //-- Components
-
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
 function ChatArea(props){
+  //Displays the communications with the server.
   
-  const ChatAreaRef                   = useRef();
-
-  //--------------------------------------- -------------------
-  function renderItem({item}){   
-    
+  const ChatAreaRef = useRef();
+  
+  function renderItem({item}){    
     return (
       <Box>{item.content}</Box>      
     ) 
@@ -36,12 +35,12 @@ function ChatArea(props){
 
   return (
     <FlatList 
-      ref={ChatAreaRef}
+      ref=                {ChatAreaRef}
       onContentSizeChange={()=> ChatAreaRef.current.scrollToEnd()}
-      extraData=    {props}
-      data=         {props.chatData}
-      keyExtractor= {(item)=> item.id}
-      renderItem=   {renderItem}          
+      extraData=          {props}
+      data=               {props.chatData}
+      keyExtractor=       {(item)=> item.id}
+      renderItem=         {renderItem}          
     />
   )
 }
@@ -49,9 +48,10 @@ function ChatArea(props){
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
 function InfoBar(props){
+  //Displays data such as health points.
   return(
     <Box backgroundColor="white">
-      <Text fontSize="lg" >Health: {props.text}</Text>
+      <Text fontSize="lg">Health: {props.text}</Text>
     </Box>
   )
 }
@@ -59,7 +59,7 @@ function InfoBar(props){
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
 function CommandsActionsheet(props){
-
+  //Displays a pressable list of commands.
   return(
     <Actionsheet isOpen={props.openCmdActnSht} disableOverlay>
       <Actionsheet.Content>        
@@ -72,6 +72,7 @@ function CommandsActionsheet(props){
 ///////////////////////////////////////////////
 ///////////////////////////////////////////////
 function UserInput(props){
+  //Where the user types in commands.
   return (
     <Input
       selectTextOnFocus=  {true}
@@ -87,13 +88,14 @@ export default function App() {
 
   const [openCmdActnSht, setOpenCmdActnSht]         = useState(false);
   const [infobarText,    setInfobarText]            = useState("Text");
-  const [cmdActnSht_Content, setCmdActnSht_Content] = useState([]);  
-
+  const [cmdActnSht_Content, setCmdActnSht_Content] = useState([]);
   const [chatData,    setChatData]                  = useState([]);
 
-  // var ws = new WebSocket('ws://10.0.0.6:8080');  
-  var ws = new WebSocket('ws://192.168.20.48:8080'); 
+  // var ws = new WebSocket('ws://10.0.0.6:8080');   //For PC dev
+  var ws = new WebSocket('ws://192.168.20.48:8080'); //For Laptop dev
+
   ws.onopen = () => {
+    //Action to perform on connection open.
 
     //Log in
     let login_msg = {
@@ -118,8 +120,7 @@ export default function App() {
       case ("Status"):
         setInfobarText(msg["content"]["health"]);
         break;
-    }      
-    
+    }    
   };
 
   ws.onerror = (e) => {
@@ -133,6 +134,7 @@ export default function App() {
   };
 
   function generate_user_text_chat_item_content(data){
+    //Generate a box with the text the user entered, as a visual feedback.
     return (
       <Box 
         style=                  {styles.chat_box_user} 
@@ -147,7 +149,8 @@ export default function App() {
   }
 
   function generate_generic_message_chat_item_content(data){
-    //https://www.npmjs.com/package/react-native-markdown-display handle links
+    //Display a text message recived from the server.
+    //Parse it a CommonMark down.    
     return (
       <Box 
         style=                  {styles.chat_box_system} 
@@ -162,32 +165,32 @@ export default function App() {
   }
 
   function add_chat_item(template, data){
-    //get data and converts it to a chat item format.
+    //get data and converts it to a chat item format, according to it's source.
     let content;
     if (template===null){
-      return;     
-    }  else if (template==="user_text"){
-      
+      return;
+
+    } else if (template==="user_text"){      
       content = generate_user_text_chat_item_content(data);      
     } else if (template==="generic_message"){      
-      
       content = generate_generic_message_chat_item_content(data["text"])
     }
 
     let new_chat_item = {
       id:       get_new_id(),      
       content:  content
-    };
-    
+    };    
     setChatData((chatData => [...chatData, new_chat_item]));
   }
 
   function link_handler(data){
-        
-    //assume data string format is "NPC_ID"
-    let data_arr = data.split('_');
-    let type = data_arr[0];
-    let id= data_arr[1];
+    //Handles clicks on links in the Chat interface.
+    //Each link has metadata of the form "NPC_ID".
+    //The commands to be displayed in the ActionSheet depend on the type.
+    
+    let data_arr= data.split('_');
+    let type=     data_arr[0];
+    let id=       data_arr[1];
 
     let content = [];
     let cmd_arr = [];
@@ -229,6 +232,11 @@ export default function App() {
         cmd_arr = ["Look"];
         break;
 
+      case("Screwdriver"):
+      case("Candy"):
+      case("T-Shirt"):
+        cmd_arr = ["Look", "Get", "Drop", "Wear/Hold", "Remove", "Consume"];
+        break;
       
       default:
         console.error(`link_handler: unknown type - ${type}.`);
@@ -237,6 +245,7 @@ export default function App() {
     for (const cmd of cmd_arr){
       let text;
       if (id===undefined){
+        //Some commands don't have an ID (such as North, etc.)
         text = `${cmd}`;
       } else {
         text = `${cmd} ${id}`;
@@ -246,6 +255,8 @@ export default function App() {
         <Actionsheet.Item 
           key={get_new_id()}
           onPress={()=>{
+            //When a command is pressed, process it as if the user typed
+            //it manually, then close the ActionSheet.
             process_user_input(text);
             setOpenCmdActnSht(false);            
           }}
@@ -254,6 +265,8 @@ export default function App() {
         </Actionsheet.Item>
       );      
     }
+
+    //After populating the ActionSheet, open it.
     setCmdActnSht_Content(content);
     setOpenCmdActnSht(true);    
   }
