@@ -1,11 +1,14 @@
 import React, { useState, useRef }                  from 'react';
 import { StyleSheet}                                from 'react-native';
-import {Box, NativeBaseProvider, Input, FlatList }  from 'native-base';
-import { Actionsheet, Text }                        from 'native-base';
+import {Box, NativeBaseProvider, Input, FlatList, Button, FormControl, Stack }  from 'native-base';
+import { Actionsheet, Text, Modal }                 from 'native-base';
+import Markdown                                     from 'react-native-markdown-display';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const DEBUG = false;
+const CLEAR_STORAGE = true;
 
 //https://www.npmjs.com/package/react-native-markdown-display
-import Markdown                                     from 'react-native-markdown-display';
-
 //////////////////////////////////
 function get_new_id(length=12) {
   //Generate a random 12 char id (String)
@@ -91,21 +94,94 @@ export default function App() {
   const [cmdActnSht_Content, setCmdActnSht_Content] = useState([]);
   const [chatData,    setChatData]                  = useState([]);
 
-  // var ws = new WebSocket('ws://10.0.0.6:8080');   //For PC dev
-  var ws = new WebSocket('ws://192.168.20.48:8080'); //For Laptop dev
+  const [showLoginModal, setShowLoginModal]         = useState(false);
+  const [username, setUsername]                     = useState("");
+  const [password, setPassword]                     = useState("");  
+  const [isLoggedIn, setIsLoggedIn]                 = useState(false);
 
-  ws.onopen = () => {
-    //Action to perform on connection open.
+  var ws;
 
+  const clearStorage = async ()=> {
+    try {
+      await AsyncStorage.clear()
+    } catch(e){
+      console.error(`clearStorage: ${e}`)
+    }
+  }
+  
+  //Try to get login info of the user.
+  const get_login_info = async () => {
+    try {
+      const jsonValue= await AsyncStorage.getItem('@login_info');
+      return JSON.parse(jsonValue);            
+    } catch(e){
+      console.error(`get_login_info: ${e}`);
+    }
+  }
+
+  const store_login_info = async (info) => {
+    try {
+      const jsonValue = JSON.stringify(info);
+      await AsyncStorage.setItem('@login_info', jsonValue);
+    } catch(e){
+      console.error(`store_login_info: ${e}`);
+    }
+  }
+
+  function login_to_server(username, password){
+    console.log(username, password);
     //Log in
     let login_msg = {
       type: 'Login',
       content: {
-        username: 'HaichiPapa',
-        password: '12345678'
+        username: username,
+        password: password
       }
     }
     ws.send(JSON.stringify(login_msg));
+    setIsLoggedIn(true);
+  }
+
+  var ws = new WebSocket('ws://10.0.0.2:8080');   //For PC dev
+  // var ws = new WebSocket('ws://192.168.20.48:8080'); //For Laptop dev
+
+  ws.onopen = () => {
+    if (isLoggedIn) return;
+    console.log('onopen');
+    //Action to perform on connection open.
+
+    if (DEBUG){
+      if (CLEAR_STORAGE){
+        clearStorage();
+      }
+      login_to_server('HaichiPapa', '12345678');
+    } else {
+      get_login_info().then(
+        function(login_info){
+          if (login_info===null){
+            setShowLoginModal(true);
+          }
+        }
+      );
+    }
+
+
+
+    // get_login_info().then(
+
+    //   function(data){
+    //     console.log(data);
+    //     if (data===null){
+    //       //No login info. Show modal
+    //       setShowLoginModal(true);
+
+    //     } else {
+    //       setUsername(data.username);
+    //       setPassword(data.password);
+    //       login_to_server();
+    //     }
+    //   }
+    // );   
   }
 
   ws.onmessage = (e) => {
@@ -242,7 +318,18 @@ export default function App() {
         console.error(`link_handler: unknown type - ${type}.`);
     }
 
-    for (const cmd of cmd_arr){
+    for (let cmd of cmd_arr){
+      
+      switch (cmd){
+        case "Wear/Hold":
+          cmd = 'Wear';
+          break;
+
+        case "Consume":
+          cmd = 'Eat';
+          break;        
+      }
+
       let text;
       if (id===undefined){
         //Some commands don't have an ID (such as North, etc.)
@@ -256,27 +343,33 @@ export default function App() {
           key={get_new_id()}
           onPress={()=>{
             //When a command is pressed, process it as if the user typed
-            //it manually, then close the ActionSheet.
-            process_user_input(text);
-            setOpenCmdActnSht(false);            
+            //it manually, then close the ActionSheet.            
+            process_user_input(text);            
+            // setOpenCmdActnSht(false);            
           }}
+          onPressOut={()=> {            
+            setOpenCmdActnSht(false)
+          }}
+
         >
           {text}
         </Actionsheet.Item>
       );      
     }
-
+    
     //After populating the ActionSheet, open it.
-    setCmdActnSht_Content(content);
-    setOpenCmdActnSht(true);    
+    setCmdActnSht_Content(content);    
+    setOpenCmdActnSht(true);        
   }
 
   function process_user_input(text){
+
     add_chat_item('user_text', {content: text});
+
     let msg = {
       type: 'User Input',
       content: text
-    }
+    }    
     ws.send(JSON.stringify(msg));
   }  
 
@@ -289,7 +382,52 @@ export default function App() {
         <UserInput  process_user_input={process_user_input}/>
       </Box>
 
-      <CommandsActionsheet openCmdActnSht={openCmdActnSht} content={cmdActnSht_Content}/>      
+      <CommandsActionsheet openCmdActnSht={openCmdActnSht} content={cmdActnSht_Content}/>
+
+      {/* Login Modal */}
+      <Modal 
+        isOpen={showLoginModal} 
+        onClose={()=>{setShowLoginModal(false)}} 
+        avoidKeyboard
+      >
+      <Modal.Content>
+        <Modal.CloseButton />
+        <Modal.Header>Enter Username And Password</Modal.Header>
+        <Modal.Body>
+          <FormControl isRequired>
+            <Stack mx="4">
+              <FormControl.Label>Username</FormControl.Label>
+              <Input 
+                selectTextOnFocus= {true}
+                value={username}
+                onChangeText={(value)=>{setUsername(value)}}
+              />
+              <FormControl.Label>Password</FormControl.Label>
+              <Input 
+                type="password" 
+                selectTextOnFocus= {true}
+                value={password}
+                onChangeText={(value)=>{setPassword(value)}}
+              />
+            </Stack>
+          </FormControl>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button onPress={()=>{
+            // store_login_info({
+            //   username: {username},
+            //   password: {password}
+            // })
+            setShowLoginModal(false);
+            login_to_server(username, password)
+          }}
+          >
+            Save
+          </Button>          
+        </Modal.Footer>
+      </Modal.Content>
+    </Modal>
+      
     </NativeBaseProvider>
   )
 }
